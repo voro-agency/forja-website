@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FORJA — Performance & Treinamento</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <!-- Lenis -->
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+
+  <style>
+    /* ─── RESET & BASE ─────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:     #080808;
+      --yellow: #f5c518;
+      --white:  rgba(255,255,255,0.9);
+      --muted:  rgba(255,255,255,0.35);
+      --dark2:  #111111;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ─── GRAIN OVERLAY ────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
+    }
+
+    /* ─── SCANLINES ────────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.015) 3px,
+        rgba(255,255,255,0.015) 4px
+      );
+    }
+
+    /* ─── CUSTOM CURSOR ────────────────────────────────────────── */
+    #cursor {
+      position: fixed;
+      top: 0; left: 0;
+      width: 20px; height: 20px;
+      border: 2px solid var(--yellow);
+      border-radius: 0;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s, background 0.2s;
+      will-change: transform;
+    }
+    #cursor.expand {
+      width: 36px; height: 36px;
+      background: rgba(245,197,24,0.12);
+    }
+
+    /* ─── SMOOTH SCROLL WRAPPER ────────────────────────────────── */
+    #scroll-container { will-change: transform; }
+
+    /* ─── SECTION BASE ─────────────────────────────────────────── */
+    section { position: relative; overflow: hidden; }
+
+    /* ─── TYPOGRAPHY HELPERS ───────────────────────────────────── */
+    .bebas   { font-family: 'Bebas Neue', sans-serif; }
+    .yellow  { color: var(--yellow); }
+    .muted   { color: var(--muted); }
+    .inter   { font-family: 'Inter', sans-serif; }
+
+    /* ─── BADGE 24H ────────────────────────────────────────────── */
+    .badge-24h {
+      position: absolute;
+      top: 2rem; right: 2rem;
+      background: var(--yellow);
+      color: var(--bg);
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      padding: 8px 16px;
+      z-index: 10;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SEÇÃO 1 — HERO
+    ═══════════════════════════════════════════════════════════ */
+    #hero {
+      height: 100vh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 6vw;
+    }
+
+    /* faixa diagonal */
+    .hero-diagonal {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .hero-diagonal::before {
+      content: '';
+      position: absolute;
+      width: 60vw; height: 200%;
+      top: -50%;
+      left: 30vw;
+      background: var(--yellow);
+      opacity: 0.06;
+      clip-path: polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%);
+    }
+
+    /* número grande de fundo */
+    .hero-bg-number {
+      position: absolute;
+      right: -2vw;
+      bottom: -4vw;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40vw;
+      line-height: 1;
+      color: rgba(245,197,24,0.04);
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+
+    /* título principal */
+    .hero-content { position: relative; z-index: 2; }
+
+    .hero-title-line {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(4rem, 18vw, 18vw);
+      line-height: 0.85;
+      overflow: hidden;
+    }
+    .hero-title-line .char { display: inline-block; }
+
+    .hero-title-line--white { color: var(--white); }
+    .hero-title-line--yellow { color: var(--yellow); }
+
+    /* subtítulo */
+    .hero-sub {
+      margin-top: 2.5rem;
+      font-size: 1rem;
+      letter-spacing: 0.4em;
+      color: var(--muted);
+      font-weight: 300;
+      text-transform: uppercase;
+    }
+
+    /* métricas rodapé */
+    .hero-metrics {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 6vw;
+      right: 6vw;
+      display: flex;
+      gap: 0;
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      font-weight: 300;
+      z-index: 2;
+    }
+
+    /* ─── Hero image block ────────────────────────────────────── */
+    .hero-img-block {
+      position: absolute;
+      right: 6vw;
+      top: 50%;
+      transform: translateY(-50%);
+      width: clamp(260px, 32vw, 500px);
+      z-index: 1;
+    }
+    .hero-img-block img,
+    .hero-img-block video {
+      width: 100%;
+      height: clamp(340px, 45vh, 680px);
+      object-fit: cover;
+      display: block;
+      filter: grayscale(30%) contrast(1.1);
+    }
+    .hero-img-placeholder {
+      width: 100%;
+      height: clamp(340px, 45vh, 680px);
+      background: var(--dark2);
+      border-left: 3px solid var(--yellow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .hero-img-placeholder span:first-child {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.25em;
+      color: var(--yellow);
+    }
+    .hero-img-placeholder span:last-child {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SEÇÃO 2 — DIFERENCIAIS
+    ═══════════════════════════════════════════════════════════ */
+    #diferenciais {
+      padding: 8rem 6vw;
+      background: var(--bg);
+    }
+
+    .section-label {
+      font-family: 'Bebas Neue', sans-serif;
+      color: var(--yellow);
+      letter-spacing: 0.15em;
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: clamp(1.6rem, 2.5rem, 2.5rem);
+      color: var(--white);
+      max-width: 640px;
+      line-height: 1.2;
+      margin-bottom: 4rem;
+    }
+
+    .diferenciais-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    .dif-card {
+      border-left: 3px solid var(--yellow);
+      padding: 1.5rem;
+      background: rgba(245,197,24,0.03);
+    }
+
+    /* ─── Dif image strip ─────────────────────────────────────── */
+    .dif-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+      margin-bottom: 1.25rem;
+      filter: grayscale(40%) contrast(1.1);
+    }
+    .dif-img-placeholder {
+      width: 100%;
+      height: 160px;
+      background: rgba(245,197,24,0.04);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dif-img-placeholder span {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+    }
+
+    .dif-card-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.8rem;
+      color: var(--yellow);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .dif-card-desc {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SEÇÃO 3 — PLANOS
+    ═══════════════════════════════════════════════════════════ */
+    #planos {
+      padding: 8rem 6vw;
+      background: var(--dark2);
+    }
+
+    .planos-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 8vw, 8vw);
+      color: var(--white);
+      margin-bottom: 4rem;
+      line-height: 0.9;
+    }
+
+    .planos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .plano-card {
+      background: var(--bg);
+      padding: 2.5rem 2rem;
+      border: 1px solid rgba(255,255,255,0.06);
+      position: relative;
+      transition: transform 0.35s ease, box-shadow 0.35s ease;
+      cursor: pointer;
+    }
+    .plano-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(245,197,24,0.12);
+    }
+
+    .plano-card--pro {
+      border: 2px solid var(--yellow);
+    }
+
+    .plano-badge {
+      position: absolute;
+      top: -1px; right: 2rem;
+      background: var(--yellow);
+      color: var(--bg);
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      padding: 5px 12px;
+    }
+
+    .plano-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: var(--white);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .plano-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.5rem;
+      color: var(--yellow);
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+
+    .plano-period {
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      margin-bottom: 2rem;
+    }
+
+    .plano-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+      margin-bottom: 1.75rem;
+    }
+
+    .plano-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .plano-features li {
+      font-size: 0.875rem;
+      color: var(--muted);
+      padding-left: 1.25rem;
+      position: relative;
+      line-height: 1.4;
+    }
+    .plano-features li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--yellow);
+    }
+
+    .plano-btn {
+      display: block;
+      width: 100%;
+      margin-top: 2.5rem;
+      padding: 1rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 0.12em;
+      text-align: center;
+      cursor: pointer;
+      border: 2px solid var(--yellow);
+      background: transparent;
+      color: var(--yellow);
+      transition: background 0.25s, color 0.25s;
+    }
+    .plano-btn:hover { background: var(--yellow); color: var(--bg); }
+
+    .plano-card--pro .plano-btn {
+      background: var(--yellow);
+      color: var(--bg);
+    }
+    .plano-card--pro .plano-btn:hover {
+      background: transparent;
+      color: var(--yellow);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SEÇÃO 4 — CTA
+    ═══════════════════════════════════════════════════════════ */
+    #cta {
+      background: var(--yellow);
+      padding: 8rem 6vw;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* fundo de textura no CTA */
+    #cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 256px;
+      opacity: 0.04;
+      pointer-events: none;
+    }
+
+    .cta-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(4rem, 12vw, 12vw);
+      color: var(--bg);
+      line-height: 0.85;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-sub {
+      font-size: 1.1rem;
+      color: rgba(8,8,8,0.7);
+      margin-top: 1.5rem;
+      margin-bottom: 3rem;
+      font-weight: 300;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta-btn {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.12em;
+      padding: 1rem 2.5rem;
+      background: var(--bg);
+      color: var(--yellow);
+      border: 2px solid var(--bg);
+      cursor: pointer;
+      transition: background 0.25s, color 0.25s;
+      text-decoration: none;
+    }
+    .cta-btn:hover { background: transparent; color: var(--bg); }
+
+    .cta-phone {
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      color: rgba(8,8,8,0.6);
+      letter-spacing: 0.08em;
+    }
+
+    /* ─── CTA image strip ─────────────────────────────────────── */
+    .cta-img-strip {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 38%;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .cta-img-strip img,
+    .cta-img-strip video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(100%) contrast(1.2);
+      mix-blend-mode: multiply;
+      opacity: 0.35;
+    }
+    .cta-img-strip-placeholder {
+      width: 100%;
+      height: 100%;
+      background: rgba(8,8,8,0.08);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════════════════ */
+    footer {
+      background: var(--bg);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 4rem 6vw 3rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .footer-logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      color: var(--yellow);
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+    .footer-logo span {
+      display: block;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      font-weight: 300;
+      margin-top: 0.4rem;
+    }
+
+    .footer-info p {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.8;
+      letter-spacing: 0.05em;
+    }
+    .footer-info p strong {
+      color: var(--white);
+      font-weight: 600;
+    }
+
+    .footer-credit {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+    .footer-social {
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+    }
+    .footer-made {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.2em;
+    }
+    .footer-made a {
+      color: var(--yellow);
+      text-decoration: none;
+      opacity: 0.7;
+    }
+
+    .footer-bottom {
+      grid-column: 1 / -1;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-bottom p {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.15em;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .hero-img-block { display: none; }
+
+      .diferenciais-grid { grid-template-columns: 1fr; }
+
+      .planos-grid {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+        margin: 0 auto;
+      }
+
+      .cta-img-strip { display: none; }
+
+      footer {
+        grid-template-columns: 1fr;
+      }
+      .footer-credit { text-align: left; align-items: flex-start; }
+      .footer-bottom { flex-direction: column; gap: 0.75rem; text-align: center; }
+    }
+
+    @media (max-width: 600px) {
+      .hero-sub { font-size: 0.75rem; letter-spacing: 0.25em; }
+      .hero-metrics { font-size: 10px; flex-direction: column; gap: 0.3rem; letter-spacing: 0.15em; }
+      .badge-24h { top: 1rem; right: 1rem; font-size: 9px; padding: 6px 12px; }
+      .cta-row { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Custom cursor -->
+  <div id="cursor"></div>
+
+  <!-- ════════════════════════════════════════════════════════
+       SEÇÃO 1 — HERO
+  ════════════════════════════════════════════════════════ -->
+  <section id="hero">
+    <div class="hero-diagonal"></div>
+    <div class="hero-bg-number" aria-hidden="true">10</div>
+
+    <div class="badge-24h">ABERTO 24H</div>
+
+    <div class="hero-img-block" id="hero-img-block">
+      <video
+        src="assets/Slow_motion_close_up_of_a_male.mp4"
+        poster="assets/Gemini_Generated_Image_twamf1twamf1twam.png"
+        autoplay muted loop playsinline
+      ></video>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-title-line hero-title-line--white" id="line-voce" aria-label="VOCÊ">
+        <span class="char">V</span><span class="char">O</span><span class="char">C</span><span class="char">Ê</span>
+      </div>
+      <div class="hero-title-line hero-title-line--yellow" id="line-forjado" aria-label="É FORJADO">
+        <span class="char">É</span><span class="char">&nbsp;</span><span class="char">F</span><span class="char">O</span><span class="char">R</span><span class="char">J</span><span class="char">A</span><span class="char">D</span><span class="char">O</span>
+      </div>
+
+      <p class="hero-sub" id="hero-sub">Performance · Força · Resultado</p>
+    </div>
+
+    <div class="hero-metrics" id="hero-metrics">
+      847 ALUNOS &nbsp;·&nbsp; 12 PROFESSORES &nbsp;·&nbsp; 800M² &nbsp;·&nbsp; DESDE 2019
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       SEÇÃO 2 — DIFERENCIAIS
+  ════════════════════════════════════════════════════════ -->
+  <section id="diferenciais">
+    <p class="section-label">// Por que a FORJA</p>
+    <h2 class="section-title">Não é academia. É laboratório de performance.</h2>
+
+    <div class="diferenciais-grid">
+
+      <div class="dif-card" data-dif="0">
+        <img class="dif-img" src="assets/Gemini_Generated_Image_g7zozpg7zozpg7zo.png" alt="Treino personalizado">
+        <h3 class="dif-card-title">TREINO PERSONALIZADO</h3>
+        <p class="dif-card-desc">Avaliação física completa + periodização individualizada. Cada treino é feito sob medida para o seu corpo e objetivo — não para a média.</p>
+      </div>
+
+      <div class="dif-card" data-dif="1">
+        <img class="dif-img" src="assets/Gemini_Generated_Image_o9yt4no9yt4no9yt.png" alt="Nutrição integrada">
+        <h3 class="dif-card-title">NUTRIÇÃO INTEGRADA</h3>
+        <p class="dif-card-desc">Nutricionistas esportivos dentro da academia. Plano alimentar alinhado com seu treino, sem sair do lugar.</p>
+      </div>
+
+      <div class="dif-card" data-dif="2">
+        <img class="dif-img" src="assets/Gemini_Generated_Image_dyiykndyiykndyiy.png" alt="Recovery Zone">
+        <h3 class="dif-card-title">RECOVERY ZONE</h3>
+        <p class="dif-card-desc">Crioterapia, compressão pneumática e massoterapia. Recuperação é parte do treino — tratamos como tal.</p>
+      </div>
+
+      <div class="dif-card" data-dif="3">
+        <img class="dif-img" src="assets/Gemini_Generated_Image_utrungutrungutru.png" alt="App de evolução">
+        <h3 class="dif-card-title">APP DE EVOLUÇÃO</h3>
+        <p class="dif-card-desc">Acompanhe cada treino, evolução de carga e métricas corporais em tempo real. Seus números, sua história.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       SEÇÃO 3 — PLANOS
+  ════════════════════════════════════════════════════════ -->
+  <section id="planos">
+    <h2 class="planos-title">ESCOLHA<br>SUA FORJA</h2>
+
+    <div class="planos-grid">
+
+      <!-- BÁSICO -->
+      <div class="plano-card" data-plano="0">
+        <p class="plano-name">BÁSICO</p>
+        <p class="plano-price">R$149</p>
+        <p class="plano-period">/ mês</p>
+        <div class="plano-divider"></div>
+        <ul class="plano-features">
+          <li>Acesso livre à academia</li>
+          <li>Vestiário premium</li>
+          <li>Área cardio completa</li>
+          <li>Avaliação física inicial</li>
+        </ul>
+        <button class="plano-btn">QUERO ESSE</button>
+      </div>
+
+      <!-- PRO -->
+      <div class="plano-card plano-card--pro" data-plano="1">
+        <div class="plano-badge">MAIS POPULAR</div>
+        <p class="plano-name">PRO</p>
+        <p class="plano-price">R$249</p>
+        <p class="plano-period">/ mês</p>
+        <div class="plano-divider"></div>
+        <ul class="plano-features">
+          <li>Tudo do plano Básico</li>
+          <li>4 aulas em grupo / mês</li>
+          <li>Acesso ao app de evolução</li>
+          <li>Check-in de performance mensal</li>
+          <li>Desconto em suplementos</li>
+        </ul>
+        <button class="plano-btn">QUERO ESSE</button>
+      </div>
+
+      <!-- ELITE -->
+      <div class="plano-card" data-plano="2">
+        <p class="plano-name">ELITE</p>
+        <p class="plano-price">R$449</p>
+        <p class="plano-period">/ mês</p>
+        <div class="plano-divider"></div>
+        <ul class="plano-features">
+          <li>Tudo do plano Pro</li>
+          <li>Personal trainer dedicado</li>
+          <li>Consultas com nutricionista</li>
+          <li>Recovery Zone ilimitado</li>
+          <li>Prioridade na grade de aulas</li>
+          <li>Acesso a eventos exclusivos</li>
+        </ul>
+        <button class="plano-btn">QUERO ESSE</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       SEÇÃO 4 — CTA
+  ════════════════════════════════════════════════════════ -->
+  <section id="cta">
+    <div class="cta-img-strip">
+      <video
+        src="assets/Slow_pan_through_an_empty_prem.mp4"
+        poster="assets/Gemini_Generated_Image_ii3k7ii3k7ii3k7i.png"
+        autoplay muted loop playsinline
+      ></video>
+    </div>
+
+    <h2 class="cta-title" id="cta-title">COMECE<br>HOJE</h2>
+    <p class="cta-sub">Primeira semana grátis. Sem burocracia.</p>
+
+    <div class="cta-row">
+      <a href="#planos" class="cta-btn">QUERO COMEÇAR</a>
+      <span class="cta-phone">(11) 94823-1100</span>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════════════════════════ -->
+  <footer>
+    <div class="footer-logo">
+      FORJA
+      <span>PERFORMANCE & TREINAMENTO</span>
+    </div>
+
+    <div class="footer-info">
+      <p><strong>Av. Paulista, 1234</strong><br>Bela Vista — São Paulo, SP<br>CEP 01310-100</p>
+      <br>
+      <p>Segunda a Sábado: 06h – 23h<br>Domingo: 08h – 20h<br>Feriados: 08h – 14h</p>
+    </div>
+
+    <div class="footer-credit">
+      <p class="footer-social">@forjasp</p>
+      <p class="footer-made">Feito pela <a href="https://voro.studio" target="_blank" rel="noopener">VORO</a></p>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2024 FORJA ACADEMIA. TODOS OS DIREITOS RESERVADOS.</p>
+      <p>CNPJ 00.000.000/0001-00</p>
+    </div>
+  </footer>
+
+  <!-- ════════════════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════════════════ -->
+  <script>
+    /* ─── LENIS smooth scroll ──────────────────────────────── */
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smooth: true,
+    });
+    gsap.ticker.add(time => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+
+    /* ─── GSAP + ScrollTrigger ─────────────────────────────── */
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ScrollTrigger respeita Lenis */
+    lenis.on('scroll', ScrollTrigger.update);
+
+    /* ─── Custom cursor (lerp) ─────────────────────────────── */
+    const cursor = document.getElementById('cursor');
+    let mx = 0, my = 0, cx = 0, cy = 0;
+
+    window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+    gsap.ticker.add(() => {
+      cx += (mx - cx) * 0.08;
+      cy += (my - cy) * 0.08;
+      gsap.set(cursor, { x: cx, y: cy });
+    });
+
+    /* expand on hover */
+    document.querySelectorAll('a, button, [data-plano], [data-dif]').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('expand'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('expand'));
+    });
+
+    /* ─── HERO ANIMATIONS ──────────────────────────────────── */
+    const tl = gsap.timeline({ delay: 0.2 });
+
+    /* "VOCÊ" — chars caem de cima */
+    tl.from('#line-voce .char', {
+      yPercent: -120,
+      opacity: 0,
+      duration: 0.9,
+      ease: 'power3.out',
+      stagger: 0.04,
+    });
+
+    /* "É FORJADO" — chars sobem de baixo */
+    tl.from('#line-forjado .char', {
+      yPercent: 120,
+      opacity: 0,
+      duration: 0.9,
+      ease: 'power3.out',
+      stagger: 0.04,
+    }, '-=0.65');
+
+    /* subtítulo fade */
+    tl.from('#hero-sub', {
+      opacity: 0,
+      y: 20,
+      duration: 0.8,
+      ease: 'power2.out',
+    }, '-=0.4');
+
+    /* métricas fade */
+    tl.from('#hero-metrics', {
+      opacity: 0,
+      y: 10,
+      duration: 0.7,
+      ease: 'power2.out',
+    }, '-=0.5');
+
+    /* hero img block */
+    tl.from('#hero-img-block', {
+      opacity: 0,
+      x: 60,
+      duration: 1,
+      ease: 'power3.out',
+    }, '-=1.2');
+
+    /* ─── DIFERENCIAIS ScrollTrigger ───────────────────────── */
+    gsap.from('.section-label', {
+      scrollTrigger: { trigger: '#diferenciais', start: 'top 80%' },
+      opacity: 0, y: 20, duration: 0.6,
+    });
+    gsap.from('.section-title', {
+      scrollTrigger: { trigger: '#diferenciais', start: 'top 75%' },
+      opacity: 0, y: 30, duration: 0.8, delay: 0.15,
+    });
+
+    document.querySelectorAll('.dif-card').forEach((card, i) => {
+      const fromX = i % 2 === 0 ? -40 : 40;
+      gsap.from(card, {
+        scrollTrigger: { trigger: card, start: 'top 85%' },
+        xPercent: fromX,
+        opacity: 0,
+        duration: 0.9,
+        ease: 'power3.out',
+        delay: i * 0.08,
+      });
+    });
+
+    /* ─── PLANOS ScrollTrigger ─────────────────────────────── */
+    gsap.from('.planos-title', {
+      scrollTrigger: { trigger: '#planos', start: 'top 80%' },
+      opacity: 0, y: 50, duration: 0.9, ease: 'power3.out',
+    });
+
+    document.querySelectorAll('.plano-card').forEach((card, i) => {
+      gsap.from(card, {
+        scrollTrigger: { trigger: '#planos', start: 'top 70%' },
+        opacity: 0,
+        y: 60,
+        duration: 0.8,
+        ease: 'power3.out',
+        delay: i * 0.12,
+      });
+    });
+
+    /* ─── CTA ScrollTrigger ────────────────────────────────── */
+    gsap.from('#cta-title', {
+      scrollTrigger: { trigger: '#cta', start: 'top 75%' },
+      opacity: 0,
+      y: 60,
+      duration: 1,
+      ease: 'power3.out',
+    });
+
+    gsap.from('.cta-sub, .cta-row', {
+      scrollTrigger: { trigger: '#cta', start: 'top 70%' },
+      opacity: 0,
+      y: 30,
+      duration: 0.8,
+      ease: 'power2.out',
+      stagger: 0.15,
+      delay: 0.3,
+    });
+
+    /* ─── FOOTER ScrollTrigger ─────────────────────────────── */
+    gsap.from('footer > *', {
+      scrollTrigger: { trigger: 'footer', start: 'top 90%' },
+      opacity: 0,
+      y: 20,
+      duration: 0.7,
+      stagger: 0.1,
+    });
+
+    /* ─── Parallax no bg-number do hero ───────────────────── */
+    gsap.to('.hero-bg-number', {
+      yPercent: 30,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '#hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true,
+      },
+    });
+  </script>
+</body>
+</html>
